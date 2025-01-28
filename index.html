@@ -1,0 +1,648 @@
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="StoryGEN: Advanced AI-powered story generation platform">
+<title>StoryGEN: Advanced Story Generation Platform</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+<style>
+    /* Custom styles */
+    .loader {
+        border: 5px solid #f3f3f3;
+        border-top: 5px solid #3498db;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    .transition-height {
+        transition: max-height 0.3s ease-out;
+        overflow: hidden;
+    }
+    @media (max-width: 768px) {
+        .container {
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+        
+        header h1 {
+            font-size: 2.5rem;
+        }
+        
+        header p {
+            font-size: 1.25rem;
+        }
+        
+        nav ul {
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        nav ul li {
+            margin-bottom: 0.5rem;
+        }
+    }
+    .story-part {
+        position: relative;
+        padding: 10px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        transition: all 0.3s ease;
+    }
+    .story-part:hover {
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .expand-button {
+        display: none;
+        position: absolute;
+        bottom: 5px;
+        right: 5px;
+        background-color: #4a5568;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 5px 10px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+    .expand-button:hover {
+        background-color: #2d3748;
+    }
+    .story-part:hover .expand-button {
+        display: block;
+    }
+    .expanded {
+        border-color: #4a5568;
+    }
+    header {
+        background-color: #fee440;
+    }
+    header svg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+    }
+    @keyframes rotate {
+        0% {
+            transform: rotate(0deg);
+        }
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+    .out-top {
+        animation: rotate 20s linear infinite;
+        transform-origin: 13px 25px;
+    }
+    .in-top {
+        animation: rotate 10s linear infinite;
+        transform-origin: 13px 25px;
+    }
+    .out-bottom {
+        animation: rotate 25s linear infinite;
+        transform-origin: 84px 93px;
+    }
+    .in-bottom {
+        animation: rotate 15s linear infinite;
+        transform-origin: 84px 93px;
+    }
+    header h1, header p {
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    }
+    nav {
+        background: rgba(255, 255, 255, 0.4);
+        backdrop-filter: blur(5.2px);
+        -webkit-backdrop-filter: blur(5.2px);
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+    }
+    nav .container {
+        border-radius: 16px;
+        overflow: hidden;
+    }
+    @media (max-width: 768px) {
+        nav .container {
+            border-radius: 0;
+        }
+    }
+    .story-part-controls {
+        display: none;
+    }
+    .story-part:hover .story-part-controls {
+        display: flex;
+    }
+    .custom-prompt {
+        width: 150px;
+    }
+    .expand-loader {
+        width: 16px;
+        height: 16px;
+        border: 2px solid #ffffff;
+        border-top: 2px solid #3498db;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+</style>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans">
+    <header class="relative py-12 overflow-hidden">
+        <svg preserveAspectRatio="xMidYMid slice" viewBox="10 10 80 80" class="absolute inset-0 w-full h-full">
+            <defs>
+                <style>
+                    @keyframes rotate {
+                        0% {
+                            transform: rotate(0deg);
+                        }
+                        100% {
+                            transform: rotate(360deg);
+                        }
+                    }
+                    .out-top {
+                        animation: rotate 20s linear infinite;
+                        transform-origin: 13px 25px;
+                    }
+                    .in-top {
+                        animation: rotate 10s linear infinite;
+                        transform-origin: 13px 25px;
+                    }
+                    .out-bottom {
+                        animation: rotate 25s linear infinite;
+                        transform-origin: 84px 93px;
+                    }
+                    .in-bottom {
+                        animation: rotate 15s linear infinite;
+                        transform-origin: 84px 93px;
+                    }
+                </style>
+            </defs>
+            <path fill="#9b5de5" class="out-top" d="M37-5C25.1-14.7,5.7-19.1-9.2-10-28.5,1.8-32.7,31.1-19.8,49c15.5,21.5,52.6,22,67.2,2.3C59.4,35,53.7,8.5,37-5Z"></path>
+            <path fill="#f15bb5" class="in-top" d="M20.6,4.1C11.6,1.5-1.9,2.5-8,11.2-16.3,23.1-8.2,45.6,7.4,50S42.1,38.9,41,24.5C40.2,14.1,29.4,6.6,20.6,4.1Z"></path>
+            <path fill="#00bbf9" class="out-bottom" d="M105.9,48.6c-12.4-8.2-29.3-4.8-39.4.8-23.4,12.8-37.7,51.9-19.1,74.1s63.9,15.3,76-5.6c7.6-13.3,1.8-31.1-2.3-43.8C117.6,63.3,114.7,54.3,105.9,48.6Z"></path>
+            <path fill="#00f5d4" class="in-bottom" d="M102,67.1c-9.6-6.1-22-3.1-29.5,2-15.4,10.7-19.6,37.5-7.6,47.8s35.9,3.9,44.5-12.5C115.5,92.6,113.9,74.6,102,67.1Z"></path>
+        </svg>
+        <div class="container mx-auto px-4 relative z-10">
+            <h1 class="text-4xl md:text-5xl font-bold mb-4 text-center text-white">StoryGEN: Craft Your Tale</h1>
+            <p class="text-xl mb-8 text-center text-white">Unleash your creativity with AI-powered storytelling</p>
+            <div class="text-center">
+                <a href="#story-generator" class="bg-white text-indigo-600 font-bold py-3 px-6 rounded-full hover:bg-indigo-100 transition duration-300 inline-flex items-center shadow-md hover:shadow-lg">
+    <i class="fas fa-magic mr-2"></i>Start Creating
+</a>
+            </div>
+        </div>
+    </header>
+
+    <nav class="py-4 sticky top-0 z-50">
+        <div class="container mx-auto px-4">
+            <ul class="flex flex-wrap justify-center space-x-2 md:space-x-8">
+                <li><a href="#story-generator" class="text-indigo-600 hover:text-indigo-800 font-bold transition duration-300 py-2 px-3 rounded hover:bg-indigo-100"><i class="fas fa-pen-fancy mr-2"></i>Story Generator</a></li>
+                <li><a href="#how-to-use" class="text-indigo-600 hover:text-indigo-800 font-bold transition duration-300 py-2 px-3 rounded hover:bg-indigo-100"><i class="fas fa-question-circle mr-2"></i>How to Use</a></li>
+                <li><a href="#examples" class="text-indigo-600 hover:text-indigo-800 font-bold transition duration-300 py-2 px-3 rounded hover:bg-indigo-100"><i class="fas fa-book-open mr-2"></i>Examples</a></li>
+                <li><a href="#analytics" class="text-indigo-600 hover:text-indigo-800 font-bold transition duration-300 py-2 px-3 rounded hover:bg-indigo-100"><i class="fas fa-chart-bar mr-2"></i>Analytics</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 py-8">
+        <div class="flex flex-col lg:flex-row gap-8">
+            <aside class="w-full lg:w-1/3 bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-2xl font-bold text-blue-600 mb-4">Customization Options</h2>
+                <div class="form-group mb-4">
+                    <label for="genre" class="block font-bold mb-2"><i class="fas fa-book mr-2"></i>Genre:</label>
+                    <select id="genre" aria-label="Select story genre" class="w-full p-2 border border-gray-300 rounded">
+                        <option value="fantasy">Fantasy</option>
+                        <option value="sci-fi">Science Fiction</option>
+                        <option value="mystery">Mystery</option>
+                        <option value="romance">Romance</option>
+                        <option value="horror">Horror</option>
+                        <option value="historical">Historical Fiction</option>
+                        <option value="thriller">Thriller</option>
+                        <option value="comedy">Comedy</option>
+                    </select>
+                </div>
+                <div class="form-group mb-4">
+                    <label for="protagonist" class="block font-bold mb-2"><i class="fas fa-user mr-2"></i>Protagonist:</label>
+                    <input type="text" id="protagonist" aria-label="Describe your main character" placeholder="Describe your main character" class="w-full p-2 border border-gray-300 rounded">
+                </div>
+                <div class="form-group mb-4">
+                    <label for="setting" class="block font-bold mb-2"><i class="fas fa-map-marker-alt mr-2"></i>Setting:</label>
+                    <input type="text" id="setting" aria-label="Describe the story's setting" placeholder="Describe the story's setting" class="w-full p-2 border border-gray-300 rounded">
+                </div>
+                <div class="form-group mb-4">
+                    <label for="plot-structure" class="block font-bold mb-2">Plot Structure:</label>
+                    <select id="plot-structure" aria-label="Select plot structure" class="w-full p-2 border border-gray-300 rounded">
+                        <option value="three-act">Three-Act Structure</option>
+                        <option value="hero-journey">Hero's Journey</option>
+                        <option value="five-act">Five-Act Structure</option>
+                        <option value="seven-point">Seven-Point Story Structure</option>
+                        <option value="freytag-pyramid">Freytag's Pyramid</option>
+                        <option value="non-linear">Non-Linear</option>
+                    </select>
+                </div>
+                <div class="form-group mb-4">
+                    <label for="story-length" class="block font-bold mb-2"><i class="fas fa-ruler mr-2"></i>Story Length (words):</label>
+                    <input type="number" id="story-length" min="1000" max="100000" value="5000" step="1000" aria-label="Select story length in words" class="w-full p-2 border border-gray-300 rounded">
+                    <div class="flex justify-between text-sm text-gray-600 mt-1">
+                        <span>Short Story: 1,000 - 7,500</span>
+                        <span>Novella: 7,500 - 40,000</span>
+                        <span>Novel: 40,000+</span>
+                    </div>
+                </div>
+                <div class="form-group mb-4">
+                    <label for="chapter-count" class="block font-bold mb-2">Number of Chapters:</label>
+                    <input type="number" id="chapter-count" min="1" max="100" value="1" aria-label="Select number of chapters" class="w-full p-2 border border-gray-300 rounded">
+                </div>
+                <div class="form-group mb-4">
+                    <label for="language" class="block font-bold mb-2"><i class="fas fa-language mr-2"></i>Language:</label>
+                    <select id="language" aria-label="Select language" class="w-full p-2 border border-gray-300 rounded">
+                        <option value="english">English</option>
+                        <option value="spanish">Spanish</option>
+                        <option value="french">French</option>
+                        <option value="german">German</option>
+                        <option value="italian">Italian</option>
+                        <option value="portuguese">Portuguese</option>
+                        <option value="russian">Russian</option>
+                        <option value="chinese">Chinese</option>
+                        <option value="japanese">Japanese</option>
+                        <option value="croatian">Croatian</option>
+                        <option value="bosnian">Bosnian</option>
+                    </select>
+                </div>
+                <button id="toggle-advanced" class="text-blue-600 underline font-semibold focus:outline-none">Advanced Options</button>
+                <div id="advanced-options" class="transition-height max-h-0">
+                    <div class="form-group mb-4">
+                        <label for="pov" class="block font-bold mb-2">Point of View:</label>
+                        <select id="pov" aria-label="Select point of view" class="w-full p-2 border border-gray-300 rounded">
+                            <option value="first-person">First Person</option>
+                            <option value="second-person">Second Person</option>
+                            <option value="third-person-limited">Third Person Limited</option>
+                            <option value="third-person-omniscient">Third Person Omniscient</option>
+                        </select>
+                    </div>
+                    <div class="form-group mb-4">
+                        <label for="tense" class="block font-bold mb-2">Tense:</label>
+                        <select id="tense" aria-label="Select tense" class="w-full p-2 border border-gray-300 rounded">
+                            <option value="past">Past</option>
+                            <option value="present">Present</option>
+                            <option value="future">Future</option>
+                        </select>
+                    </div>
+                    <div class="form-group mb-4">
+                        <label for="tone" class="block font-bold mb-2">Tone:</label>
+                        <select id="tone" aria-label="Select tone" class="w-full p-2 border border-gray-300 rounded">
+                            <option value="serious">Serious</option>
+                            <option value="humorous">Humorous</option>
+                            <option value="dark">Dark</option>
+                            <option value="light">Light</option>
+                            <option value="satirical">Satirical</option>
+                        </select>
+                    </div>
+                    <div class="form-group mb-4">
+                        <label for="writing-style" class="block font-bold mb-2">Writing Style:</label>
+                        <select id="writing-style" aria-label="Select writing style" class="w-full p-2 border border-gray-300 rounded">
+                            <option value="descriptive">Descriptive</option>
+                            <option value="concise">Concise</option>
+                            <option value="flowery">Flowery</option>
+                            <option value="technical">Technical</option>
+                            <option value="stream-of-consciousness">Stream of Consciousness</option>
+                        </select>
+                    </div>
+                    <div class="form-group mb-4">
+                        <label for="themes" class="block font-bold mb-2">Themes (comma-separated):</label>
+                        <input type="text" id="themes" aria-label="Add themes for the story" placeholder="e.g., love, betrayal, redemption" class="w-full p-2 border border-gray-300 rounded">
+                    </div>
+                </div>
+            </aside>
+            
+            <main class="w-full lg:w-2/3 bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-2xl font-bold text-blue-600 mb-4">Story Generator</h2>
+                <div class="form-group mb-4">
+                    <label for="story-prompt" class="block font-bold mb-2">Story Prompt:</label>
+                    <textarea id="story-prompt" rows="4" aria-label="Enter a brief description or starting point for your story" placeholder="Enter a brief description or starting point for your story" class="w-full p-2 border border-gray-300 rounded focus:border-blue-500 focus:ring focus:ring-blue-200"></textarea>
+                </div>
+                <button id="generate-story" class="bg-blue-600 text-white rounded py-2 px-4 hover:bg-blue-700 transition duration-300 flex items-center justify-center">
+                    <i class="fas fa-magic mr-2"></i>Generate Story
+                </button>
+                <div id="story-loader" class="loader hidden mx-auto mt-4"></div>
+                <div id="story-output" class="mt-4 prose prose-sm sm:prose lg:prose-lg xl:prose-xl mx-auto">
+                    <!-- Story content will be dynamically inserted here -->
+                </div>
+            </main>
+        </div>
+        
+        <section id="how-to-use" class="py-12 bg-gray-100">
+            <div class="container mx-auto px-4">
+                <h2 class="text-3xl font-bold text-center mb-8">How to Use StoryGEN</h2>
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <div class="text-4xl text-indigo-600 mb-4"><i class="fas fa-sliders-h"></i></div>
+                        <h3 class="text-xl font-semibold mb-2">1. Customize Your Story</h3>
+                        <p>Choose your genre, protagonist, setting, and other options to tailor your story.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <div class="text-4xl text-indigo-600 mb-4"><i class="fas fa-keyboard"></i></div>
+                        <h3 class="text-xl font-semibold mb-2">2. Enter Your Prompt</h3>
+                        <p>Provide a brief description or starting point for your story in the prompt field.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <div class="text-4xl text-indigo-600 mb-4"><i class="fas fa-magic"></i></div>
+                        <h3 class="text-xl font-semibold mb-2">3. Generate Your Story</h3>
+                        <p>Click the "Generate Story" button and let our AI create a unique tale just for you.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <div class="text-4xl text-indigo-600 mb-4"><i class="fas fa-book-reader"></i></div>
+                        <h3 class="text-xl font-semibold mb-2">4. Read and Enjoy</h3>
+                        <p>Your generated story will appear in the output section. Read and enjoy your creation!</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <div class="text-4xl text-indigo-600 mb-4"><i class="fas fa-chart-line"></i></div>
+                        <h3 class="text-xl font-semibold mb-2">5. Analyze Your Story</h3>
+                        <p>Check out the analytics section to gain insights into your generated story's characteristics.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <div class="text-4xl text-indigo-600 mb-4"><i class="fas fa-redo"></i></div>
+                        <h3 class="text-xl font-semibold mb-2">6. Refine and Repeat</h3>
+                        <p>Not satisfied? Adjust your settings and generate again until you're happy with the result.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="examples" class="py-12 bg-white">
+            <div class="container mx-auto px-4">
+                <h2 class="text-3xl font-bold text-center mb-8">Story Examples</h2>
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div class="bg-gray-100 p-6 rounded-lg shadow-md">
+                        <h3 class="text-xl font-semibold mb-2">Sci-Fi Adventure</h3>
+                        <p class="mb-4">A space explorer discovers an ancient alien artifact that could change the course of human history.</p>
+                        <button class="bg-indigo-600 text-white py-2 px-4 rounded hover:bg-indigo-700 transition duration-300">Use This Prompt</button>
+                    </div>
+                    <div class="bg-gray-100 p-6 rounded-lg shadow-md">
+                        <h3 class="text-xl font-semibold mb-2">Fantasy Quest</h3>
+                        <p class="mb-4">A young mage embarks on a perilous journey to recover a stolen magical artifact and save her kingdom.</p>
+                        <button class="bg-indigo-600 text-white py-2 px-4 rounded hover:bg-indigo-700 transition duration-300">Use This Prompt</button>
+                    </div>
+                    <div class="bg-gray-100 p-6 rounded-lg shadow-md">
+                        <h3 class="text-xl font-semibold mb-2">Mystery Thriller</h3>
+                        <p class="mb-4">A detective must solve a series of cryptic murders before the killer strikes again in a small coastal town.</p>
+                        <button class="bg-indigo-600 text-white py-2 px-4 rounded hover:bg-indigo-700 transition duration-300">Use This Prompt</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="analytics" class="mt-8 bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-2xl font-bold text-blue-600 mb-4">Story Analytics</h2>
+            <div id="analytics-output" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <!-- Analytics will be populated here -->
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const advancedOptions = document.getElementById('advanced-options');
+        const toggleAdvanced = document.getElementById('toggle-advanced');
+
+        toggleAdvanced.addEventListener('click', function() {
+            if (advancedOptions.style.maxHeight) {
+                advancedOptions.style.maxHeight = null;
+                this.textContent = 'Advanced Options';
+            } else {
+                advancedOptions.style.maxHeight = advancedOptions.scrollHeight + "px";
+                this.textContent = 'Hide Advanced Options';
+            }
+        });
+
+        document.getElementById('generate-story').addEventListener('click', function() {
+            const storyData = {
+                genre: document.getElementById('genre').value,
+                protagonist: document.getElementById('protagonist').value,
+                setting: document.getElementById('setting').value,
+                plotStructure: document.getElementById('plot-structure').value,
+                storyLength: parseInt(document.getElementById('story-length').value),
+                chapterCount: parseInt(document.getElementById('chapter-count').value),
+                language: document.getElementById('language').value,
+                pov: document.getElementById('pov').value,
+                tense: document.getElementById('tense').value,
+                tone: document.getElementById('tone').value,
+                writingStyle: document.getElementById('writing-style').value,
+                themes: document.getElementById('themes').value,
+                storyPrompt: document.getElementById('story-prompt').value
+            };
+
+            document.getElementById('story-loader').classList.remove('hidden');
+            document.getElementById('story-output').innerHTML = '';
+            document.getElementById('generate-story').disabled = true;
+
+            fetch('/api/intelligent-ai', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(storyData),
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                document.getElementById('story-loader').classList.add('hidden');
+                document.getElementById('generate-story').disabled = false;
+                let storyHtml = `<h3 class="text-xl font-bold mb-4">Generated Story:</h3>`;
+                
+                if (data.chapters && Array.isArray(data.chapters)) {
+                    data.chapters.forEach((chapter, index) => {
+                        storyHtml += `
+                            <div class="mb-6">
+                                <h4 class="text-lg font-semibold mb-2">Chapter ${index + 1}</h4>
+                                <p class="text-gray-700 leading-relaxed">${chapter}</p>
+                            </div>
+                        `;
+                    });
+                } else if (typeof data.story === 'string') {
+                    const storyHtml = createExpandableStoryParts(data.story);
+                    document.getElementById('story-output').innerHTML = `
+                        <h3 class="text-xl font-bold mb-4">Generated Story:</h3>
+                        ${storyHtml}
+                    `;
+
+                    // Add event listeners for expand buttons
+                    document.querySelectorAll('.expand-button').forEach(button => {
+                        button.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            const storyPart = this.closest('.story-part');
+                            const index = parseInt(storyPart.getAttribute('data-index'));
+                            expandStoryPart(index);
+                        });
+                    });
+                } else {
+                    throw new Error('Invalid story data received');
+                }
+
+                if (data.analytics) {
+                    updateAnalyticsDisplay(data.analytics);
+                }
+                showNotification('Story generated successfully!');
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+                document.getElementById('story-loader').classList.add('hidden');
+                document.getElementById('generate-story').disabled = false;
+                showNotification('An error occurred while generating the story. Please try again.', 'error');
+            });
+        });
+
+        function createExpandableStoryParts(story) {
+            const paragraphs = story.split('\n\n');
+            let storyHtml = '';
+
+            paragraphs.forEach((paragraph, index) => {
+                storyHtml += `
+                    <div class="story-part" data-index="${index}">
+                        <p class="text-gray-700 leading-relaxed">${paragraph}</p>
+                        <div class="story-part-controls flex items-center mt-2">
+                            <input type="text" class="custom-prompt mr-2 p-1 text-sm border border-gray-300 rounded" placeholder="Custom expansion prompt">
+                            <button class="expand-button flex items-center justify-center">
+                                <span>Expand</span>
+                                <div class="expand-loader ml-2 hidden"></div>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            return storyHtml;
+        }
+
+        function expandStoryPart(index) {
+            const storyPart = document.querySelector(`.story-part[data-index="${index}"]`);
+            const customPrompt = storyPart.querySelector('.custom-prompt').value;
+            const expandButton = storyPart.querySelector('.expand-button');
+            const expandLoader = expandButton.querySelector('.expand-loader');
+
+            const storyData = {
+                index: index,
+                context: storyPart.querySelector('p').textContent,
+                customPrompt: customPrompt
+            };
+
+            expandButton.disabled = true;
+            expandLoader.classList.remove('hidden');
+
+            fetch('/api/expand-story', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(storyData),
+            })
+            .then(response => response.json())
+            .then(data => {
+                const expandedContent = data.expandedContent;
+                storyPart.innerHTML = `
+                    <p class="text-gray-700 leading-relaxed">${expandedContent}</p>
+                    <div class="story-part-controls flex items-center mt-2">
+                        <input type="text" class="custom-prompt mr-2 p-1 text-sm border border-gray-300 rounded" placeholder="Custom expansion prompt">
+                        <button class="expand-button flex items-center justify-center">
+                            <span>Expand Further</span>
+                            <div class="expand-loader ml-2 hidden"></div>
+                        </button>
+                    </div>
+                `;
+                storyPart.classList.add('expanded');
+                addExpandButtonListener(storyPart.querySelector('.expand-button'), index);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('An error occurred while expanding the story part. Please try again.', 'error');
+            })
+            .finally(() => {
+                expandButton.disabled = false;
+                expandLoader.classList.add('hidden');
+            });
+        }
+
+        function addExpandButtonListener(button, index) {
+            button.addEventListener('click', function() {
+                expandStoryPart(index);
+            });
+        }
+
+        // Update the event listener setup in the main script
+        document.querySelectorAll('.expand-button').forEach(button => {
+            const storyPart = button.closest('.story-part');
+            const index = parseInt(storyPart.getAttribute('data-index'));
+            addExpandButtonListener(button, index);
+        });
+
+        function updateAnalyticsDisplay(analytics) {
+            const metricsHtml = Object.entries(analytics).map(([key, value]) => `
+                <div class="bg-gray-100 p-4 rounded-lg shadow">
+                    <h4 class="font-semibold text-blue-600">${key.charAt(0).toUpperCase() + key.slice(1)}</h4>
+                    <div class="flex items-center mt-2">
+                        <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700 mr-2">
+                            <div class="bg-blue-600 h-2.5 rounded-full" style="width: ${value * 10}%"></div>
+                        </div>
+                        <span class="text-sm font-medium text-gray-700">${value}/10</span>
+                    </div>
+                </div>
+            `).join('');
+            
+            document.getElementById('analytics-output').innerHTML = metricsHtml;
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `fixed bottom-4 right-4 p-4 rounded-lg text-white ${type === 'error' ? 'bg-red-500' : 'bg-green-500'} shadow-lg transition-opacity duration-300`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        const tooltips = {
+            'genre': 'Select the genre that best fits your story idea.',
+            'protagonist': 'Describe your main character, including their key traits and background.',
+            'setting': 'Specify where and when your story takes place.',
+            'plot-structure': 'Choose the overall structure for your story\'s plot.',
+            'story-length': 'Determine how long you want your story to be.',
+            'chapter-count': 'Decide how many chapters your story should have.',
+            'language': 'Select the language for your generated story.',
+            'pov': 'Choose the perspective from which the story is told.',
+            'tense': 'Select the primary tense for your story.',
+            'tone': 'Decide on the overall mood or atmosphere of your story.',
+            'writing-style': 'Choose the style of writing for your story.',
+            'themes': 'Add key themes or motifs you want to explore in your story.',
+            'story-prompt': 'Provide a brief description or starting point for your story.'
+        };
+
+        Object.keys(tooltips).forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                const tooltip = document.createElement('div');
+                tooltip.className = 'tooltip hidden absolute bg-gray-800 text-white p-2 rounded text-sm';
+                tooltip.textContent = tooltips[id];
+                element.parentNode.appendChild(tooltip);
+
+                element.addEventListener('focus', () => {
+                    tooltip.classList.remove('hidden');
+                    tooltip.style.top = `${element.offsetTop + element.offsetHeight}px`;
+                    tooltip.style.left = `${element.offsetLeft}px`;
+                });
+
+                element.addEventListener('blur', () => {
+                    tooltip.classList.add('hidden');
+                });
+            }
+        });
+    </script>
+</body></html>
